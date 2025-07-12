@@ -29,7 +29,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR_NUMBER="${{ github.event.inputs.PR_NUMBER }}"
+          PR_NUMBER="${{ inputs.PR_NUMBER }}"
           REPO="${{ github.repository }}"
 
           echo "📦 Processing PR #$PR_NUMBER in repo $REPO"
