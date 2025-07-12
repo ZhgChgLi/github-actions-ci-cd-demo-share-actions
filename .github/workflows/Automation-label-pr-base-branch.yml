@@ -1,0 +1,68 @@
+name: Automation-label-pr-base-branch
+run-name: "[Automation-label-pr-base-branch] ${{ github.event.inputs.PR_NUMBER || github.ref }}"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.PR_NUMBER || github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_call:
+    inputs:
+      # PR Number
+      PR_NUMBER:
+        required: true
+        type: string
+
+jobs:
+  label-pr-base-branch:
+    name: Label PR Base Branch
+    continue-on-error: true
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Label PR by Base Branch
+        id: label-pr-base-branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER="${{ github.event.inputs.PR_NUMBER }}"
+          REPO="${{ github.repository }}"
+
+          echo "📦 Processing PR #$PR_NUMBER in repo $REPO"
+
+          # 取得 PR 的 base branch
+          BASE_BRANCH=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json baseRefName --jq '.baseRefName')
+          echo "🔖 PR Base Branch: $BASE_BRANCH"
+
+          # 允許的 base branch labels
+          BRANCH_LABELS=("develop" "main" "master")
+
+          # Label 是否在允許列表
+          if [[ " ${BRANCH_LABELS[@]} " =~ " ${BASE_BRANCH} " ]]; then
+            LABEL="$BASE_BRANCH"
+          else
+            echo "⚠️ Base branch '$BASE_BRANCH' not in allowed list, skipping label."
+            exit 0
+          fi
+
+          # 移除現有的 base branch labels
+          EXISTING_LABELS=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json labels --jq '.labels[].name')
+          for EXISTING in $EXISTING_LABELS; do
+            if [[ " ${BRANCH_LABELS[@]} " =~ " ${EXISTING} " ]]; then
+              echo "🧹 Removing existing base branch label: $EXISTING"
+              gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "$EXISTING"
+            fi
+          done
+
+          # 如果 Label 不存在則建立
+          if ! gh label list --repo "$REPO" | grep -q "^$LABEL$"; then
+            echo "🆕 Creating missing label: $LABEL"
+            gh label create "$LABEL" --repo "$REPO" --description "PR targeting $LABEL branch" --color "ededed"
+          else
+            echo "✅ Label '$LABEL' already exists"
+          fi
+
+          # 加上 base branch label
+          echo "🏷️ Adding label '$LABEL' to PR #$PR_NUMBER"
+          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL"
