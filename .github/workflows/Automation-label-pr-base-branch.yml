@@ -5,13 +5,17 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.inputs.PR_NUMBER || github.ref }}
   cancel-in-progress: true
 
+# 觸發事件
 on:
+  # 其他 Workflow 呼叫此 Workflow 觸發
   workflow_call:
+    # 資料輸入
     inputs:
       # PR Number
       PR_NUMBER:
         required: true
         type: string
+    # 密鑰輸入
     secrets:
       GH_TOKEN:
         description: "GitHub token for API access"
