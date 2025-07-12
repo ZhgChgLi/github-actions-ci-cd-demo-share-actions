@@ -12,7 +12,10 @@ on:
       PR_NUMBER:
         required: true
         type: string
-
+    secrets:
+      GH_TOKEN:
+        description: "GitHub token for API access"
+        required: true
 jobs:
   label-pr-base-branch:
     name: Label PR Base Branch
